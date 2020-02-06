@@ -83,7 +83,7 @@ class Window(Frame):
         price_entry.grid(row=2, column=2, stick="WE", padx=30)
         date_entry = Entry(self, validate="key", validatecommand=(self.register(lambda x: (x.isdigit() or x == '/')), '%S'))
         date_entry.grid(row=2, column=3, stick="WE", padx=30)
-        cat_menu = OptionMenu(self, var, *["Tech", "Groceries", "Personal", "Misc."])
+        cat_menu = OptionMenu(self, var, *["Bill", "Grocery", "Personal", "Other"])
         cat_menu.grid(row=2, column=4, stick="W", padx=30)
 
         self.checkID()
