@@ -19,7 +19,6 @@ class LoginWindow(Frame):
 
     def init_window(self):
         self.master.title("Spending Tracker - Login")
-        #self.pack(fill=BOTH, expand=1)
 
         # Initialize window with necessary buttons and labels
         username_label = Label(self, text='Username: ')
@@ -137,7 +136,7 @@ class CreateAccount(Frame):
 
             insertions = {values: query}
 
-            insert = db.insert(insertions)
+            insert = db.insertAccount(insertions)
             if insert is True:
                 print("Account creation successful!")
                 MainApp.createAlert(self, "Account creation successful!", "Success", "OK")

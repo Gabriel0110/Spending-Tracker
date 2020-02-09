@@ -3,7 +3,8 @@ import sqlite3
 from sqlite3 import Error
 import os
 import pyautogui
-from datetime import datetime
+from datetime import datetime, timedelta
+import numpy as np
 
 class Database:
     def __init__(self):
@@ -72,6 +73,22 @@ class Database:
                 if breached:
                     print("User exceeded monthly spending theshold!")
                     Spending_Tracker.MainApp.createAlert(self, "You have exceeded your monthly spending threshold of ${:.2f}!".format(float(user_threshold)), "Threshold exceeded!", "Oops!")
+            except Error as e:
+                print(e)
+                Spending_Tracker.MainApp.createAlert(self, e, "ERROR", "OK")
+                return False
+        #pyautogui.alert(text = "Insertions successful!", title = "SUCCESS", button = 'OK')
+        self.conn.commit()
+        return True
+
+    def insertAccount(self, insertions):
+        c = self.conn.cursor()
+
+        # Loop through all records (entries), inserting each into the database
+        for values, query in insertions.items():
+            try:
+                c.execute(query, values)
+                print("Insertion successful!")
             except Error as e:
                 print(e)
                 Spending_Tracker.MainApp.createAlert(self, e, "ERROR", "OK")
@@ -155,6 +172,31 @@ class Database:
 
         total_summary = month_summary + "\n\n" + db_summary
         pyautogui.alert(text=total_summary, title="Summary", button="OK")
+        self.displayGraph()
+
+    def displayGraph(self):
+        import matplotlib.pyplot as plt
+
+        prior_thirty = []
+        for i in range(31):
+            date = (datetime.now() + timedelta(-(i+1))).strftime("%m/%d/%Y")
+            prior_thirty.append(date)
+        prior_thirty = prior_thirty[::-1] # in order from 30 days ago, to yesterday
+
+        cat_sums = {"Bill": 0, "Groceries": 0, "Personal": 0, "Other": 0}
+        c = self.conn.cursor()
+        for date in prior_thirty:
+            for cat in ["Bill", "Groceries", "Personal", "Other"]:
+                cat_sum = c.execute("""SELECT SUM(price) FROM expenses WHERE date = ? AND category = ?""", (date, cat)).fetchone()[0]
+                cat_sums[cat] += (0 if cat_sum is None else (float(cat_sum)))
+
+        plt.bar(cat_sums.keys(), cat_sums.values())
+        plt.xticks(["Bill", "Groceries", "Personal", "Other"])
+        plt.ylabel('Dollar Amount')
+        plt.xlabel('Category')
+        plt.title('Total Spent Per Category in Last 30 Days')
+        plt.show()
+        return
 
     def getPriciestCategory(self, c, current_month):
         categories = ["Bill", "Groceries", "Personal", "Other"]
@@ -174,9 +216,15 @@ class Database:
             if (monthly_sums[i] if monthly_sums[i] else 0) > month_max:
                 month_index = i
                 month_max = monthly_sums[i]
+            elif (monthly_sums[i] if monthly_sums[i] else 0) == month_max:
+                month_index = i
+
             if (overall_sums[i] if overall_sums[i] else 0) > overall_max:
                 overall_index = i
                 overall_max = overall_sums[i]
+            elif (overall_sums[i] if overall_sums[i] else 0) == overall_max:
+                overall_index = i
+                
         return [month_max, categories[month_index], overall_max, categories[overall_index]]
 
     def getCurrentMonth(self):
