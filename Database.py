@@ -66,6 +66,12 @@ class Database:
             try:
                 c.execute(query, values)
                 print("Insertion successful!")
+                
+                # Check if breach threshold
+                breached, user_threshold = self.checkThreshold(c)
+                if breached:
+                    print("User exceeded monthly spending theshold!")
+                    pyautogui.alert(text = "You have exceeded your monthly spending threshold of ${:.2f}!".format(float(user_threshold)), title = "Threshold exceeded!", button = 'Oops!')
             except Error as e:
                 print(e)
                 pyautogui.alert(text = e, title = "ERROR", button = ['OK'])
@@ -73,6 +79,16 @@ class Database:
         #pyautogui.alert(text = "Insertions successful!", title = "SUCCESS", button = 'OK')
         self.conn.commit()
         return True
+
+    def checkThreshold(self, c):
+        current_month = self.getCurrentMonth()
+        user_threshold = c.execute("""SELECT price_threshold FROM accounts WHERE username = ?""", (self.CURRENT_USERNAME,)).fetchone()[0]
+        monthly_sum = c.execute("""SELECT SUM(price) FROM expenses WHERE username = ? AND date LIKE ?""", (self.CURRENT_USERNAME, current_month+"%",)).fetchone()[0]
+
+        if monthly_sum > user_threshold:
+            return True, user_threshold
+        else:
+            return False, user_threshold
 
     def getDatabaseIds(self):
         c = self.conn.cursor()
@@ -101,7 +117,7 @@ class Database:
             pyautogui.alert(text = e, title = "ERROR", button = ['OK'])
 
     def getSummary(self):
-        current_month = datetime.now().month
+        current_month = self.getCurrentMonth()
         #current_year = datetime.now().year
 
         c = self.conn.cursor()
@@ -110,8 +126,6 @@ class Database:
         db_min_price = c.execute("""SELECT MIN(price) FROM expenses WHERE username = ?""", (self.CURRENT_USERNAME,)).fetchone()
         db_sum_price = c.execute("""SELECT SUM(price) FROM expenses WHERE username = ?""", (self.CURRENT_USERNAME,)).fetchone()
 
-        if current_month in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
-            current_month = "0{}".format(current_month)
         current_month_avg = c.execute("""SELECT AVG(price) FROM expenses WHERE username = ? AND date LIKE ?""", (self.CURRENT_USERNAME, current_month+"%",)).fetchone()
         current_month_max = c.execute("""SELECT MAX(price) FROM expenses WHERE username = ? AND date LIKE ?""", (self.CURRENT_USERNAME, current_month+"%",)).fetchone()
         current_month_min = c.execute("""SELECT MIN(price) FROM expenses WHERE username = ? AND date LIKE ?""", (self.CURRENT_USERNAME, current_month+"%",)).fetchone()
@@ -164,6 +178,14 @@ class Database:
                 overall_index = i
                 overall_max = overall_sums[i]
         return [month_max, categories[month_index], overall_max, categories[overall_index]]
+
+    def getCurrentMonth(self):
+        current_month = datetime.now().month
+        if current_month in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
+            current_month = "0{}".format(current_month)
+        else:
+            current_month = str(current_month)
+        return current_month
 
     def customSearch(self):
         # ONLY ACCEPTS SQL AT THE MOMENT -- human language conversion coming soon :(
