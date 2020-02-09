@@ -4,7 +4,6 @@ from sqlite3 import Error
 import os
 import pyautogui
 from datetime import datetime, timedelta
-import numpy as np
 
 class Database:
     def __init__(self):
