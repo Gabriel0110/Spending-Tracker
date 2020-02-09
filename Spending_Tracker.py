@@ -33,6 +33,7 @@ class LoginWindow(Frame):
         pass_entry.grid(row=2, column=2, sticky="N", padx=40, pady=20, columnspan=2)
 
         login_button = Button(self, text='Login', width=20, command=partial(self.processLogin, username_entry, pass_entry))
+        login_button.focus_set()
         login_button.grid(row=3, column=2, columnspan=1, padx=10, pady=25)
 
         create_button = Button(self, text='Create Account', width=20, command=lambda: self.newWindow(CreateAccount))
@@ -47,7 +48,7 @@ class LoginWindow(Frame):
 
         # Check if they have anything entered
         if not username or not password:
-            pyautogui.alert(text="You must enter a username and password.", title="Error", button="OK")
+            MainApp.createAlert(self, "You must enter a username and password.", "Error", "OK")
             return
         
         # Check for valid username & password.  If EITHER are incorrect, say that EITHER are incorrect, not "user incorrect" or "pass incorrect"
@@ -55,10 +56,10 @@ class LoginWindow(Frame):
 
         if username not in login_info.keys() or password not in login_info[username]:
             print("Username or password invalid.")
-            pyautogui.alert(text="Username or password invalid.", title="Error", button="OK")
+            MainApp.createAlert(self, "Username or password invalid.", "Error", "OK")
         elif username in login_info.keys() and password in login_info[username]:
             # If both valid
-            pyautogui.alert(text="Login successful!", title="Success!", button="OK")
+            MainApp.createAlert(self, "Login successful!", "Success!", "OK")
             db.CURRENT_USERNAME = username
             CURRENT_USERNAME = username
             user.delete(0, END)
@@ -111,17 +112,17 @@ class CreateAccount(Frame):
         for item in [user.get(), pw.get(), email.get()]:
             if not item:
                 print("Username, password, and email are required!")
-                pyautogui.alert(text="Username, password, and email are required!", title="Error", button="OK")
+                MainApp.createAlert(self, "Username, password, and email are required!", "Error", "OK")
                 return
             
         login_info = db.getLoginInfo()
         if user.get() in login_info.keys():
             print("Username already taken.")
-            pyautogui.alert(text="Username already taken.", title="Error", button="OK")
+            MainApp.createAlert(self, "Username already taken.", "Error", "OK")
             return
         elif any(email.get() in val for val in login_info.values()):
             print("Email already in use.")
-            pyautogui.alert(text="Email already in use.", title="Error", button="OK")
+            MainApp.createAlert(self, "Email already in use.", "Error", "OK")
             return
         else:
             self.username = user.get()
@@ -139,7 +140,7 @@ class CreateAccount(Frame):
             insert = db.insert(insertions)
             if insert is True:
                 print("Account creation successful!")
-                pyautogui.alert(text="Account creation successful!", title="Success", button="OK")
+                MainApp.createAlert(self, "Account creation successful!", "Success", "OK")
                 self.master.destroy()
             else:
                 print("Error with account creation.")
@@ -177,6 +178,9 @@ class MainApp(Frame):
         self.occupied_rows = []
         self.id = 0
 
+        # Rollback dictionary to undo last submission
+        self.rollback = {}
+
         # Get a free ID slot by checking against IDs in database
         while True:
             if self.id in self.all_ids:
@@ -185,7 +189,7 @@ class MainApp(Frame):
             else:
                 break
 
-        # Hold all records (entries) present in the window
+        # Hold all records (entries) present in the window that are to be submitted to DB
         self.records = {}
 
         self.init_window()
@@ -202,7 +206,7 @@ class MainApp(Frame):
         submitButton = Button(self, text='Submit', width=20, command=self.insert)
         submitButton.grid(row=0, column=1, padx=20, pady=25)
 
-        rollbackButton = Button(self, text='Rollback (INACTIVE)', width=20, command=db.rollback)
+        rollbackButton = Button(self, text='Rollback (INACTIVE)', width=20, command=partial(self.undo, self.rollback))
         rollbackButton.grid(row=0, column=2, padx=20, pady=25)
 
         summaryButton = Button(self, text='Summary', width=20, command=db.getSummary)
@@ -249,6 +253,25 @@ class MainApp(Frame):
         self.records[self.id] = record
         self.id += 1
 
+    def undo(self, rb):
+        if len(rb) == 0:
+            self.createAlert("There are no entries submitted prior to this to undo.", "Nothing to undo", "OK")
+            return
+        else:
+            text = ""
+            for idx, record in rb.items():
+                item = record[0]
+                price = record[1]
+                date = record[2]
+                cat = record[3]
+                text += "ID {}:  {}    {}    {}    {}\n".format(idx, item, price, date, cat)
+
+            ans = pyautogui.confirm(text="Are you sure you want to delete the previous entries below?\n\n{}".format(text), title="Delete previous entries?", buttons=['Yes', 'No'])
+            if ans == 'Yes':
+                db.rollback(rb)
+                self.rollback.clear()
+            elif ans == 'No':
+                return
     
     def checkID(self):
         self.all_ids = db.getDatabaseIds()
@@ -337,16 +360,20 @@ class MainApp(Frame):
 
 
     def insert(self):
+        # Prep rollback dictionary for undo button
+        for idx, record in self.records.items():
+            self.rollback[idx] = [record[0].get(), record[1].get(), record[2].get(), record[3].get()]
+
         for idx, record in self.records.items():
             for i in range(4):
                 if not record[i].get():
                     print("All fields must have a value!")
-                    pyautogui.alert(text="All fields must have a value!", title="Error", button="OK")
+                    self.createAlert("All fields must have a value!", "Error", "OK")
                     return
                 if i == 3:
                     if record[i].get() == "-empty-":
                         print("Categories must be something other than '-empty-'.")
-                        pyautogui.alert(text="Categories must be something other than '-empty-'.", title="Error", button="OK")
+                        self.createAlert("Categories must be something other than '-empty-'.", "Error", "OK")
                         return
 
         # Collect all records to be inserted into the database
@@ -416,6 +443,8 @@ class MainApp(Frame):
         self.records[self.id] = record
         self.id += 1
 
+    def createAlert(self, text, title, button):
+        pyautogui.alert(text=text, title=title, button=button)
 
     def client_exit(self):
         db.conn.close()
