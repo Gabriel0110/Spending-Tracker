@@ -206,7 +206,7 @@ class MainApp(Frame):
         submitButton = Button(self, text='Submit', width=20, command=self.insert)
         submitButton.grid(row=0, column=1, padx=20, pady=25)
 
-        rollbackButton = Button(self, text='Rollback (INACTIVE)', width=20, command=partial(self.undo, self.rollback))
+        rollbackButton = Button(self, text='Undo Entries', width=20, command=partial(self.undo, self.rollback))
         rollbackButton.grid(row=0, column=2, padx=20, pady=25)
 
         summaryButton = Button(self, text='Summary', width=20, command=db.getSummary)
