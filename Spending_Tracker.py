@@ -7,17 +7,166 @@ import os
 import random
 import pyautogui
 from datetime import datetime
-        
 
-class Window(Frame):
-
+class LoginWindow(Frame):
     def __init__(self, master=None): 
         Frame.__init__(self, master)
                 
         self.master = master
-        self.DB = Database.Database() # init database at startup
+        self.master.geometry("600x400")
 
-        self.all_ids = self.DB.getDatabaseIds()
+        self.init_window()
+
+    def init_window(self):
+        self.master.title("Spending Tracker - Login")
+        #self.pack(fill=BOTH, expand=1)
+
+        # Initialize window with necessary buttons and labels
+        username_label = Label(self, text='Username: ')
+        username_label.grid(row=1, column=1, sticky="N", padx=40, pady=20)
+        username_entry = Entry(self, width=40)
+        username_entry.grid(row=1, column=2, sticky="N", padx=40, pady=20, columnspan=2)
+
+        pass_label = Label(self, text='Password: ')
+        pass_label.grid(row=2, column=1, sticky="N", padx=40, pady=20)
+        pass_entry = Entry(self, show="*", width=40)
+        pass_entry.grid(row=2, column=2, sticky="N", padx=40, pady=20, columnspan=2)
+
+        login_button = Button(self, text='Login', width=20, command=partial(self.processLogin, username_entry, pass_entry))
+        login_button.grid(row=3, column=2, columnspan=1, padx=10, pady=25)
+
+        create_button = Button(self, text='Create Account', width=20, command=lambda: self.newWindow(CreateAccount))
+        create_button.grid(row=4, column=2,pady=25)
+
+        forgot_button = Button(self, text='Forgot Password', width=20)
+        forgot_button.grid(row=5, column=2,pady=25)
+
+    def processLogin(self, user, pw):
+        username = user.get()
+        password = pw.get()
+
+        # Check if they have anything entered
+        if not username or not password:
+            pyautogui.alert(text="You must enter a username and password.", title="Error", button="OK")
+            return
+        
+        # Check for valid username & password.  If EITHER are incorrect, say that EITHER are incorrect, not "user incorrect" or "pass incorrect"
+        login_info = db.getLoginInfo()
+
+        if username not in login_info.keys() or password not in login_info[username]:
+            print("Username or password invalid.")
+            pyautogui.alert(text="Username or password invalid.", title="Error", button="OK")
+        elif username in login_info.keys() and password in login_info[username]:
+            # If both valid
+            pyautogui.alert(text="Login successful!", title="Success!", button="OK")
+            db.CURRENT_USERNAME = username
+            CURRENT_USERNAME = username
+            user.delete(0, END)
+            pw.delete(0, END)
+            self.newWindow(MainApp)
+            ### DESTROY LOGIN WINDOW SOMEHOW ###
+
+    def newWindow(self, window):
+        self.new = Toplevel(self.master)
+        window(self.new)
+
+
+class CreateAccount(Frame):
+    def __init__(self, master): 
+        Frame.__init__(self, master)
+                
+        self.master = master
+        self.master.geometry("750x400")
+        self.init_window()
+
+    def init_window(self):
+        self.master.title("Spending Tracker - Account Creation")
+        self.pack(fill=BOTH, expand=1)
+
+        # Initialize window with necessary buttons and labels
+        username_label = Label(self, text='Username: ')
+        username_label.grid(row=1, column=1, sticky="N", padx=40, pady=20)
+        username_entry = Entry(self, width=40)
+        username_entry.grid(row=1, column=2, sticky="N", padx=40, pady=20, columnspan=2)
+
+        pass_label = Label(self, text='Password: ')
+        pass_label.grid(row=2, column=1, sticky="N", padx=40, pady=20)
+        pass_entry = Entry(self, show="*", width=40)
+        pass_entry.grid(row=2, column=2, sticky="N", padx=40, pady=20, columnspan=2)
+
+        email_label = Label(self, text='Email: ')
+        email_label.grid(row=3, column=1, sticky="N", padx=40, pady=20)
+        email_entry = Entry(self, width=40)
+        email_entry.grid(row=3, column=2, sticky="N", padx=40, pady=20, columnspan=2)
+
+        threshold_label = Label(self, text='Monthly Spending Threshold: ')
+        threshold_label.grid(row=4, column=1, sticky="NW", padx=40, pady=20)
+        threshold_entry = Entry(self, width=10)
+        threshold_entry.grid(row=4, column=2, sticky="NW", padx=40, pady=20, columnspan=2)
+
+        create_button = Button(self, text='Create', width=20, command=partial(self.processCreation, username_entry, pass_entry, email_entry, threshold_entry))
+        create_button.grid(row=5, column=2, padx=10, pady=25, sticky="W")
+
+    def processCreation(self, user, pw, email, thresh):
+        for item in [user.get(), pw.get(), email.get()]:
+            if not item:
+                print("Username, password, and email are required!")
+                pyautogui.alert(text="Username, password, and email are required!", title="Error", button="OK")
+                return
+            
+        login_info = db.getLoginInfo()
+        if user.get() in login_info.keys():
+            print("Username already taken.")
+            pyautogui.alert(text="Username already taken.", title="Error", button="OK")
+            return
+        elif any(email.get() in val for val in login_info.values()):
+            print("Email already in use.")
+            pyautogui.alert(text="Email already in use.", title="Error", button="OK")
+            return
+        else:
+            self.username = user.get()
+            self.password = pw.get()
+            self.email = email.get()
+            self.date = datetime.now().strftime("%m/%d/%Y")
+            self.threshold = thresh.get()
+
+            values = (self.username, self.password, self.email, self.date, self.threshold)
+            print(values)
+            query = """INSERT INTO accounts VALUES (?, ?, ?, ?, ?);"""
+
+            insertions = {values: query}
+
+            insert = db.insert(insertions)
+            if insert is True:
+                print("Account creation successful!")
+                pyautogui.alert(text="Account creation successful!", title="Success", button="OK")
+                self.master.destroy()
+            else:
+                print("Error with account creation.")
+
+
+class ForgotPassword(Frame):
+    def __init__(self, master): 
+        Frame.__init__(self, master)
+                
+        self.master = master
+        self.master.geometry("750x400")
+        self.init_window()
+
+    def init_window(self):
+        self.master.title("Spending Tracker - Forgot Password")
+        self.pack(fill=BOTH, expand=1)
+
+
+class MainApp(Frame):
+
+    def __init__(self, master): 
+        Frame.__init__(self, master)
+                
+        self.master = master
+        self.master.geometry("1080x600")
+
+        self.all_ids = db.getDatabaseIds()
 
         # Initiate structures to dynamically store and delete widgets from dictionaries
         self.del_buttons = {}
@@ -53,13 +202,13 @@ class Window(Frame):
         submitButton = Button(self, text='Submit', width=20, command=self.insert)
         submitButton.grid(row=0, column=1, padx=20, pady=25)
 
-        rollbackButton = Button(self, text='Rollback (INACTIVE)', width=20, command=self.DB.rollback)
+        rollbackButton = Button(self, text='Rollback (INACTIVE)', width=20, command=db.rollback)
         rollbackButton.grid(row=0, column=2, padx=20, pady=25)
 
-        summaryButton = Button(self, text='Summary', width=20, command=self.DB.getSummary)
+        summaryButton = Button(self, text='Summary', width=20, command=db.getSummary)
         summaryButton.grid(row=0, column=3, padx=20, pady=25)
 
-        searchButton = Button(self, text='Search DB', width=20, command=self.DB.customSearch)
+        searchButton = Button(self, text='Search DB', width=20, command=db.customSearch)
         searchButton.grid(row=0, column=4, padx=20, pady=25)
 
         itemLabel = Label(self, text='Item', width=20)
@@ -102,7 +251,7 @@ class Window(Frame):
 
     
     def checkID(self):
-        self.all_ids = self.DB.getDatabaseIds()
+        self.all_ids = db.getDatabaseIds()
         # Get a free ID slot by checking against IDs in database
         while True:
             if self.id in self.all_ids:
@@ -142,7 +291,7 @@ class Window(Frame):
         date_entry = Entry(self, validate="key", validatecommand=(self.register(lambda x: (x.isdigit() or x == '/')), '%S'))
         date_entry.grid(row=next_row, column=3, stick="WE", padx=30)
 
-        cat_menu = OptionMenu(self, var, *["Tech", "Groceries", "Personal", "Misc."])
+        cat_menu = OptionMenu(self, var, *["Bill", "Groceries", "Personal", "Other"])
         cat_menu.grid(row=next_row, column=4, stick="W", padx=30)
 
         self.checkID()
@@ -188,6 +337,18 @@ class Window(Frame):
 
 
     def insert(self):
+        for idx, record in self.records.items():
+            for i in range(4):
+                if not record[i].get():
+                    print("All fields must have a value!")
+                    pyautogui.alert(text="All fields must have a value!", title="Error", button="OK")
+                    return
+                if i == 3:
+                    if record[i].get() == "-empty-":
+                        print("Categories must be something other than '-empty-'.")
+                        pyautogui.alert(text="Categories must be something other than '-empty-'.", title="Error", button="OK")
+                        return
+
         # Collect all records to be inserted into the database
         insertions = {}
         for idx, record in self.records.items():
@@ -195,15 +356,19 @@ class Window(Frame):
             price = record[1].get()
             date = record[2].get()
             cat = record[3].get()
-            query = """INSERT INTO expenses VALUES (?, ?, ?, ?, ?);"""
-            values = (int(idx), str(item), float(price), str(date), str(cat))
+            username = db.CURRENT_USERNAME
+            query = """INSERT INTO expenses VALUES (?, ?, ?, ?, ?, ?);"""
+            values = (int(idx), str(item), float(price), str(date), str(cat), str(username))
             insertions[values] = query
 
         # Insert records into database by calling Database class
-        self.DB.insert(insertions)
-
-        # After submitting and inserting records to database, reset the rows
-        self.resetWindow()
+        result = db.insert(insertions)
+        if result is False:
+            print("Error with submitting these entries.")
+            return
+        else:
+            # After submitting and inserting records to database, reset the rows
+            self.resetWindow()
 
 
     def resetWindow(self):
@@ -253,14 +418,23 @@ class Window(Frame):
 
 
     def client_exit(self):
-        self.DB.conn.close()
+        db.conn.close()
         exit()
 
-root = Tk()
+if __name__ == "__main__":
+    root = Tk()
 
-root.geometry("1080x600")
-root.resizable(False, False)
+    #root.geometry("1080x600")
+    root.resizable(False, False)
+    root.grid_rowconfigure(0, weight=1)
+    root.grid_columnconfigure(0, weight=1)
 
-app = Window(root)
+    app = LoginWindow(root).grid(sticky="NSEW")
 
-root.mainloop()
+    # Who is logged in
+    CURRENT_USERNAME = ""
+
+    # Initialize database at startup
+    db = Database.Database()
+
+    root.mainloop()
