@@ -313,7 +313,7 @@ class MainApp(Frame):
         date_entry = Entry(self, validate="key", validatecommand=(self.register(lambda x: (x.isdigit() or x == '/')), '%S'))
         date_entry.grid(row=next_row, column=3, stick="WE", padx=30)
 
-        cat_menu = OptionMenu(self, var, *["Bill", "Groceries", "Personal", "Other"])
+        cat_menu = OptionMenu(self, var, *["Bill", "Grocery", "Personal", "Other"])
         cat_menu.grid(row=next_row, column=4, stick="W", padx=30)
 
         self.checkID()
@@ -357,8 +357,20 @@ class MainApp(Frame):
         del self.date_entries[idx]
         del self.cat_menus[idx]
 
+    def checkDate(self):
+        for idx, record in self.records.items():
+            try:
+                date = datetime.strptime(record[2].get(), '%m/%d/%Y')
+            except:
+                print("Improper date format in a date field!")
+                self.createAlert("Improper date format in a date field. Expected format: mm/dd/yyyy", "Improper Date Format", "Ok, sorry")
+                return False
 
     def insert(self):
+        # Make sure dates are correct format before submission
+        if self.checkDate() is False:
+            return
+
         # Prep rollback dictionary for undo button
         for idx, record in self.records.items():
             self.rollback[idx] = [record[0].get(), record[1].get(), record[2].get(), record[3].get()]
@@ -429,7 +441,7 @@ class MainApp(Frame):
         price_entry.grid(row=2, column=2, stick="WE", padx=30)
         date_entry = Entry(self, validate="key", validatecommand=(self.register(lambda x: (x.isdigit() or x == '/')), '%S'))
         date_entry.grid(row=2, column=3, stick="WE", padx=30)
-        cat_menu = OptionMenu(self,var, *["Tech", "Groceries", "Personal", "Misc."])
+        cat_menu = OptionMenu(self,var, *["Bill", "Grocery", "Personal", "Other"])
         cat_menu.grid(row=2, column=4, stick="W", padx=30)
 
         #self.occupied_rows.append(next_row)

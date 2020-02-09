@@ -102,7 +102,10 @@ class Database:
         user_threshold = c.execute("""SELECT price_threshold FROM accounts WHERE username = ?""", (self.CURRENT_USERNAME,)).fetchone()[0]
         monthly_sum = c.execute("""SELECT SUM(price) FROM expenses WHERE username = ? AND date LIKE ? AND category != ?""", (self.CURRENT_USERNAME, current_month+"%", "Bill",)).fetchone()[0]
 
-        if monthly_sum > user_threshold:
+        if user_threshold is None:
+            return False, None
+
+        if (0 if monthly_sum is None else monthly_sum) > user_threshold:
             return True, user_threshold
         else:
             return False, user_threshold
@@ -183,15 +186,16 @@ class Database:
             prior_thirty.append(date)
         prior_thirty = prior_thirty[::-1] # in order from 30 days ago, to yesterday
 
-        cat_sums = {"Bill": 0, "Groceries": 0, "Personal": 0, "Other": 0}
+        # Get sum of money spent per category in last 30 days
+        cat_sums = {"Bill": 0, "Grocery": 0, "Personal": 0, "Other": 0}
         c = self.conn.cursor()
         for date in prior_thirty:
-            for cat in ["Bill", "Groceries", "Personal", "Other"]:
+            for cat in ["Bill", "Grocery", "Personal", "Other"]:
                 cat_sum = c.execute("""SELECT SUM(price) FROM expenses WHERE date = ? AND category = ?""", (date, cat)).fetchone()[0]
                 cat_sums[cat] += (0 if cat_sum is None else (float(cat_sum)))
 
         plt.bar(cat_sums.keys(), cat_sums.values())
-        plt.xticks(["Bill", "Groceries", "Personal", "Other"])
+        plt.xticks(["Bill", "Grocery", "Personal", "Other"])
         plt.ylabel('Dollar Amount')
         plt.xlabel('Category')
         plt.title('Total Spent Per Category in Last 30 Days')
@@ -199,33 +203,40 @@ class Database:
         return
 
     def getPriciestCategory(self, c, current_month):
-        categories = ["Bill", "Groceries", "Personal", "Other"]
-        monthly_sums = []
-        overall_sums = []
+        categories = ["Bill", "Grocery", "Personal", "Other"]
+        monthly_sums = {}
+        overall_sums = {}
         for cat in categories:
             month_sum = c.execute("""SELECT SUM(price) FROM expenses WHERE username = ? AND category = ? AND date LIKE ?""", (self.CURRENT_USERNAME, cat, current_month+"%",)).fetchone()
             overall_sum = c.execute("""SELECT SUM(price) FROM expenses WHERE username = ? AND category = ?""", (self.CURRENT_USERNAME, cat,)).fetchone()
-            monthly_sums.append(float(month_sum[0]) if month_sum[0] else month_sum[0])
-            overall_sums.append(float(overall_sum[0]) if overall_sum[0] else overall_sum[0])
+            monthly_sums[cat] = (float(month_sum[0]) if month_sum[0] else 0)
+            overall_sums[cat] = (float(overall_sum[0]) if overall_sum[0] else 0)
+            print("Monthly: Category {} with ${}".format(cat, month_sum[0]))
+            print("Overall: Category {} with ${}".format(cat, overall_sum[0]))
 
-        month_index = None
-        overall_index = None
-        month_max = 0
-        overall_max = 0
-        for i in range(4):
-            if (monthly_sums[i] if monthly_sums[i] else 0) > month_max:
-                month_index = i
-                month_max = monthly_sums[i]
-            elif (monthly_sums[i] if monthly_sums[i] else 0) == month_max:
-                month_index = i
+        month_cat = max(monthly_sums, key=lambda key: monthly_sums[key])
+        month_max = monthly_sums[month_cat]
+        overall_cat = max(overall_sums, key=lambda key: overall_sums[key])
+        overall_max = overall_sums[overall_cat]
 
-            if (overall_sums[i] if overall_sums[i] else 0) > overall_max:
-                overall_index = i
-                overall_max = overall_sums[i]
-            elif (overall_sums[i] if overall_sums[i] else 0) == overall_max:
-                overall_index = i
+        # month_index = None
+        # overall_index = None
+        # month_max = 0
+        # overall_max = 0
+        # for i in range(4):
+        #     if (monthly_sums[i] if monthly_sums[i] else 0) > month_max:
+        #         month_index = i
+        #         month_max = monthly_sums[i]
+        #     elif (monthly_sums[i] if monthly_sums[i] else 0) == month_max:
+        #         month_index = i
+
+        #     if (overall_sums[i] if overall_sums[i] else 0) > overall_max:
+        #         overall_index = i
+        #         overall_max = overall_sums[i]
+        #     elif (overall_sums[i] if overall_sums[i] else 0) == overall_max:
+        #         overall_index = i
                 
-        return [month_max, categories[month_index], overall_max, categories[overall_index]]
+        return [month_max, month_cat, overall_max, overall_cat]
 
     def getCurrentMonth(self):
         current_month = datetime.now().month
@@ -253,10 +264,10 @@ class Database:
         #where = "expenses"
         #when = "WHERE date LIKE MM/01/YYYY"
 
-        query += " WHERE username = {}".format(self.CURRENT_USERNAME)
+        query += """ WHERE username = ?"""
 
         c = self.conn.cursor()
-        results = c.execute(query).fetchall()
+        results = c.execute(query, (self.CURRENT_USERNAME,)).fetchall()
         Spending_Tracker.MainApp.createAlert(self, "Search results:\n{}".format(results[0]), "Search Results", "OK")
 
     def rollback(self, rb):
