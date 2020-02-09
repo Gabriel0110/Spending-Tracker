@@ -35,7 +35,8 @@ class Database:
             self.create_tables(self.conn, [self.create_expenses_table, self.create_accounts_table])
         else:
             print("Error -- no database connection found.")
-            pyautogui.alert(text = "Error -- no database connection found.", title = "ERROR", button = 'OK')
+            Spending_Tracker.MainApp.createAlert(self, "Error -- no database connection found.", "ERROR", "OK")
+            exit()
 
     def create_connection(self, db_file):
         conn = None
@@ -45,8 +46,7 @@ class Database:
             return conn
         except Error as e:
             print(e)
-            pyautogui.alert(text = e, title = "ERROR", button = 'OK')
-    
+            Spending_Tracker.MainApp.createAlert(self, e, "ERROR", "OK")    
         return conn
 
     def create_tables(self, conn, tables):
@@ -56,7 +56,7 @@ class Database:
                 c.execute(table)
             except Error as e:
                 print(e)
-                pyautogui.alert(text = e, title = "ERROR", button = 'OK')
+                Spending_Tracker.MainApp.createAlert(self, e, "ERROR", "OK")
 
     def insert(self, insertions):
         c = self.conn.cursor()
@@ -71,10 +71,10 @@ class Database:
                 breached, user_threshold = self.checkThreshold(c)
                 if breached:
                     print("User exceeded monthly spending theshold!")
-                    pyautogui.alert(text = "You have exceeded your monthly spending threshold of ${:.2f}!".format(float(user_threshold)), title = "Threshold exceeded!", button = 'Oops!')
+                    Spending_Tracker.MainApp.createAlert(self, "You have exceeded your monthly spending threshold of ${:.2f}!".format(float(user_threshold)), "Threshold exceeded!", "Oops!")
             except Error as e:
                 print(e)
-                pyautogui.alert(text = e, title = "ERROR", button = ['OK'])
+                Spending_Tracker.MainApp.createAlert(self, e, "ERROR", "OK")
                 return False
         #pyautogui.alert(text = "Insertions successful!", title = "SUCCESS", button = 'OK')
         self.conn.commit()
@@ -99,7 +99,7 @@ class Database:
             return ids
         except Error as e:
             print("Could not get Database IDs: {}".format(e))
-            pyautogui.alert(text = e, title = "ERROR", button = 'OK')
+            Spending_Tracker.MainApp.createAlert(self, e, "ERROR", "OK")
             return
 
     def getLoginInfo(self):
@@ -114,7 +114,7 @@ class Database:
             return info_dict
         except Error as e:
             print(e)
-            pyautogui.alert(text = e, title = "ERROR", button = ['OK'])
+            Spending_Tracker.MainApp.createAlert(self, e, "ERROR", "OK")
 
     def getSummary(self):
         current_month = self.getCurrentMonth()
@@ -195,7 +195,7 @@ class Database:
 
         for action in ['delete', 'drop', 'insert', 'update', 'replace']:
             if action in query.lower():
-                pyautogui.alert(text="Sorry - you can only SELECT from the database", title="Oops", button="OK")
+                Spending_Tracker.MainApp.createAlert(self, "Sorry - you can only SELECT from the database", "Oops", "OK")
                 return
         
         # Manipulate string to identify what keywords are in there, then convert keywords to SQL
@@ -209,7 +209,17 @@ class Database:
 
         c = self.conn.cursor()
         results = c.execute(query).fetchall()
-        pyautogui.alert(text="Search results:\n{}".format(results[0]), title="Search Results", button="OK")
+        Spending_Tracker.MainApp.createAlert(self, "Search results:\n{}".format(results[0]), "Search Results", "OK")
 
-    def rollback(self):
-        return
+    def rollback(self, rb):
+        c = self.conn.cursor()
+        for idx in rb.keys():
+            try:
+                c.execute("""DELETE FROM expenses WHERE id = ?""", (idx,))
+                print("Successfully removed last entries.")
+            except Error as e:
+                print(e)
+                Spending_Tracker.MainApp.createAlert(self, e, "Error", "OK")
+                return
+        Spending_Tracker.MainApp.createAlert(self, "Successfully removed last created entries.", "Success", "OK")
+
