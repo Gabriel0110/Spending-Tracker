@@ -83,7 +83,7 @@ class Database:
     def checkThreshold(self, c):
         current_month = self.getCurrentMonth()
         user_threshold = c.execute("""SELECT price_threshold FROM accounts WHERE username = ?""", (self.CURRENT_USERNAME,)).fetchone()[0]
-        monthly_sum = c.execute("""SELECT SUM(price) FROM expenses WHERE username = ? AND date LIKE ?""", (self.CURRENT_USERNAME, current_month+"%",)).fetchone()[0]
+        monthly_sum = c.execute("""SELECT SUM(price) FROM expenses WHERE username = ? AND date LIKE ? AND category != ?""", (self.CURRENT_USERNAME, current_month+"%", "Bill",)).fetchone()[0]
 
         if monthly_sum > user_threshold:
             return True, user_threshold
