@@ -69,7 +69,7 @@ class LoginWindow(Frame):
     def newWindow(self, window):
         self.new = Toplevel(self.master)
         window(self.new)
-
+        root.withdraw() # hide the login window on successful login
 
 class CreateAccount(Frame):
     def __init__(self, master): 
@@ -165,6 +165,9 @@ class MainApp(Frame):
                 
         self.master = master
         self.master.geometry("1080x600")
+
+        # If the window is closed by using the 'X', the program will end
+        self.master.protocol("WM_DELETE_WINDOW", self.client_exit)
 
         self.all_ids = db.getDatabaseIds()
 
@@ -459,6 +462,7 @@ class MainApp(Frame):
 
     def client_exit(self):
         db.conn.close()
+        root.destroy()
         exit()
 
 if __name__ == "__main__":

@@ -32,7 +32,7 @@ Note II: the local database file is created wherever your current working direct
 - An estimated spending total for the next month, once an adequate amount of data is present. Likely run linear regression over the previous 30 days.
 - A profile/settings button to allow the user to change their monthly spending threshold, password, and email any time they please.
 - Add security questions to account creation for use in recovering or resetting passwords.
-- Destroy login window on successful login
+- ~~Destroy login window on successful login~~
 - Finish database searching functionality -- namely, conversion of human language to SQL by use of keyword search/regex
 - A logging system that will log just about every action that takes place on the front end and back end, with timestamps. This will allow for better troubleshooting of issues with traceability.
 - Add a quantity box for each entry, auto-filled with '1', but can be changed to alter the total price, in case of multiples of the same item
