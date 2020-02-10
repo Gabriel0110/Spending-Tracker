@@ -43,9 +43,5 @@ Note II: the local database file is created wherever your current working direct
 Great! I'd love to know of any bugs found during testing or personal use so I can squash them like the bugs they are :)
 
 
-<<<<<<< HEAD
 
 ### Spending Tracker v2.0 coming soon with a fresh, new user interface and interactions. Stay tuned...
-=======
-### Spending Tracker v2.0 coming soon with a fresh, new user interface and interactions. Stay tuned...
->>>>>>> dc84a273126611c5e48511f15cee26e16828bc83
